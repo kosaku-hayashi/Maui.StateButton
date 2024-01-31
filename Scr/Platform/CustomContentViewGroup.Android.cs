@@ -9,6 +9,9 @@ public class CustomContentViewGroup : ContentViewGroup
 {
 	Rect _rect;
 	readonly StateButton _stateButton;
+
+    bool _longPressHandled = false;
+
 	public CustomContentViewGroup(Context context, IBorderView virtualView) : base(context)
 	{
 		_stateButton = (StateButton)virtualView;
@@ -29,15 +32,19 @@ public class CustomContentViewGroup : ContentViewGroup
 			{
 				case MotionEventActions.Down:
 					_rect = new Rect(view.Left, view.Top, view.Right, view.Bottom);
-
+					_longPressHandled = false;
 					_stateButton.InvokePressed();
+					te.Handled = false;
 					break;
 
 				case MotionEventActions.Up:
 					if (_rect.Contains(view.Left + (int)te.Event.GetX(), view.Top + (int)te.Event.GetY()))
 					{
 						_stateButton.InvokeReleased();
-						_stateButton.InvokeClicked();
+						if(!_longPressHandled)
+						{
+							_stateButton.InvokeClicked();
+						}
 					}
 					else
 					{
@@ -58,6 +65,13 @@ public class CustomContentViewGroup : ContentViewGroup
 
 					break;
 			}
+		};
+
+		LongClick += (sender, e) =>
+		{
+			_stateButton.InvokeLongPressed();
+			_longPressHandled = true;
+			e.Handled = true;
 		};
 	}
 

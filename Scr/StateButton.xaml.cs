@@ -109,6 +109,34 @@ public partial class StateButton : Border
 		set => SetValue(ReleasedCommandParameterProperty, value);
 	}
 
+	/// <summary>
+	/// Backing BindableProperty for the <see cref="LongPressCommand"/> property.
+	/// </summary>
+	public static readonly BindableProperty LongPressCommandProperty = BindableProperty.Create(nameof(LongPressCommand), typeof(ICommand), typeof(StateButton));
+
+	/// <summary>
+	/// Command that is triggered when the button is long pressed. This is a bindable property.
+	/// </summary>
+	public ICommand LongPressCommand
+	{
+		get => (ICommand)GetValue(LongPressCommandProperty);
+		set => SetValue(LongPressCommandProperty, value);
+	}
+
+	/// <summary>
+	/// Backing BindableProperty for the <see cref="LongPressCommandParameter"/> property.
+	/// </summary>
+	public static readonly BindableProperty LongPressCommandParameterProperty = BindableProperty.Create(nameof(LongPressCommandParameter), typeof(object), typeof(StateButton));
+
+	/// <summary>
+	/// Property that gets returned when  <see cref="LongPressCommand" /> is executed. This is a bindable property.
+	/// </summary>
+	public object LongPressCommandParameter
+	{
+		get => GetValue(LongPressCommandParameterProperty);
+		set => SetValue(LongPressCommandParameterProperty, value);
+	}
+
 	#endregion Commands
 
 	#region Events
@@ -127,6 +155,11 @@ public partial class StateButton : Border
 	/// Event that is triggered when button is clicked. This is a bindable property.
 	/// </summary>
 	public event EventHandler<EventArgs>? Clicked;
+
+	/// <summary>
+	/// Event that is triggered when the button is long pressed. This is a bindable property.
+	/// </summary>
+	public event EventHandler<EventArgs>? LongPressed;
 
 	#endregion Events
 
@@ -175,5 +208,16 @@ public partial class StateButton : Border
 
 		Clicked?.Invoke(this, EventArgs.Empty);
 		ClickedCommand?.Execute(ClickedCommandParameter);
+	}
+
+	internal void InvokeLongPressed()
+	{
+		if(!IsEnabled)
+		{
+			return;
+		}
+
+		LongPressed?.Invoke(this, EventArgs.Empty);
+		LongPressCommand?.Execute(LongPressCommandParameter);
 	}
 }
