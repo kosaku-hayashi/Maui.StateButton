@@ -1,78 +1,97 @@
-﻿using Android.Content;
+﻿using System.Buffers;
+using Android.Content;
 using Android.Views;
 using Java.Lang;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Platform;
 using String = Java.Lang.String;
 
 namespace IeuanWalker.Maui.StateButton.Platform;
+
 public class CustomContentViewGroup : ContentViewGroup
 {
-	Rect _rect;
 	readonly StateButton _stateButton;
+	Rect _rect;
 
-    bool _longPressHandled = false;
+	bool _longPressHandled = false;
+	bool _clickHandled = false;
 
 	public CustomContentViewGroup(Context context, IBorderView virtualView) : base(context)
 	{
 		_stateButton = (StateButton)virtualView;
-
 		Clickable = true;
 
 		//! important this click is only for accessibility
-		Click += (sender, e) => _stateButton.InvokeClicked();
+		Click += OnClick;
+		Touch += OnTouch;
+		LongClick += OnLongClick;
+	}
 
-		Touch += (sender, te) =>
+	void OnClick(object? sender, EventArgs e)
+	{
+		_stateButton.InvokeClicked();
+	}
+
+	void OnTouch(object? sender, TouchEventArgs e)
+	{
+		if(sender is not Android.Views.View view)
 		{
-			if (sender is not Android.Views.View view)
-			{
-				return;
-			}
+			return;
+		}
 
-			switch (te?.Event?.Action)
-			{
-				case MotionEventActions.Down:
-					_rect = new Rect(view.Left, view.Top, view.Right, view.Bottom);
-					_longPressHandled = false;
-					_stateButton.InvokePressed();
-					te.Handled = false;
-					break;
+		if(_rect == default)
+		{
+			int[] location = ArrayPool<int>.Shared.Rent(2);
+			view.GetLocationOnScreen(location);
+			ArrayPool<int>.Shared.Return(location);
+			_rect = new Rect(location[0], location[1], view.Width, view.Height);
+		}
 
-				case MotionEventActions.Up:
-					if (_rect.Contains(view.Left + (int)te.Event.GetX(), view.Top + (int)te.Event.GetY()))
-					{
-						_stateButton.InvokeReleased();
-						if(!_longPressHandled)
-						{
-							_stateButton.InvokeClicked();
-						}
-					}
-					else
-					{
-						_stateButton.InvokeReleased();
-					}
-					break;
+		switch(e?.Event?.Action)
+		{
+			case MotionEventActions.Down:
+				_longPressHandled = false;
+				_clickHandled = false;
+				_stateButton.InvokePressed();
+				e.Handled = false;
+				break;
 
-				case MotionEventActions.Cancel:
-					_stateButton.InvokeReleased();
+			case MotionEventActions.Up:
+				_stateButton.InvokeReleased();
+				if(!_longPressHandled)
+				{
+					_stateButton.InvokeClicked();
+				}
 
-					break;
+				_clickHandled = true;
+				break;
 
-				case MotionEventActions.Move:
-					if (!_rect.Contains(view.Left + (int)te.Event.GetX(), view.Top + (int)te.Event.GetY()))
-					{
-						_stateButton.InvokeReleased();
-					}
+			case MotionEventActions.Cancel:
+				if(!_rect.Contains((int)e.Event.GetX(), (int)e.Event.GetY()))
+				{
+					_clickHandled = true;
+				}
+				_stateButton.InvokeReleased();
+				break;
+		}
+	}
 
-					break;
-			}
-		};
-
-		LongClick += (sender, e) =>
+	void OnLongClick(object? sender, LongClickEventArgs e)
+	{
+		if(!_clickHandled)
 		{
 			_stateButton.InvokeLongPressed();
 			_longPressHandled = true;
 			e.Handled = true;
-		};
+		}
+	}
+
+	protected override void Dispose(bool disposing)
+	{
+		Click -= OnClick;
+		Touch -= OnTouch;
+		LongClick -= OnLongClick;
+		base.Dispose(disposing);
 	}
 
 	public override ICharSequence? AccessibilityClassNameFormatted => new String("android.widget.Button");
